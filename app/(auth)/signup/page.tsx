@@ -43,6 +43,12 @@ export default function SignupPage() {
         }
 
         if (data.user) {
+            if (!data.session) {
+                setError('Registration successful! Please check your email to confirm your account before logging in.');
+                setLoading(false);
+                return;
+            }
+
             if (role === 'admin') router.push('/dashboard/admin');
             else if (role === 'driver') router.push('/dashboard/driver');
             else router.push('/dashboard/client');
