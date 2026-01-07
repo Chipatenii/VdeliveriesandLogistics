@@ -24,19 +24,28 @@ function RecenterMap({ coords }: { coords: GeolocationCoordinates | null }) {
     return null;
 }
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+
 export default function DriverMap({ coords }: { coords: GeolocationCoordinates | null }) {
     const defaultCenter: [number, number] = [-15.3875, 28.3228]; // Lusaka Center
+
+    // Use Mapbox style if token exists, fallback to CartoDB Dark (brightened) or Voyager
+    const tileUrl = MAPBOX_TOKEN
+        ? `https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png";
 
     return (
         <MapContainer
             center={defaultCenter}
             zoom={13}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: '100%', width: '100%', filter: MAPBOX_TOKEN ? 'none' : 'brightness(0.8) contrast(1.2)' }}
             zoomControl={false}
         >
             <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url={tileUrl}
+                attribution={MAPBOX_TOKEN ? '&copy; Mapbox' : '&copy; OpenStreetMap contributors &copy; CARTO'}
+                tileSize={512}
+                zoomOffset={-1}
             />
             {coords && (
                 <Marker position={[coords.latitude, coords.longitude]} icon={customIcon} />

@@ -1,151 +1,174 @@
 "use client";
 
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Banknote, User, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MapPin, User, Loader2, Coins, Navigation, ArrowRight } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import AddressSearch from '../shared/AddressSearch';
+import { useToast } from '@/components/ui/toaster';
 
 export default function CreateOrderModal({
     isOpen,
     onClose,
-    onlineDrivers
+    externalPickup,
+    externalDropoff
 }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onlineDrivers: any[];
+    isOpen: boolean,
+    onClose: () => void,
+    externalPickup?: { address: string, coords: [number, number] },
+    externalDropoff?: { address: string, coords: [number, number] }
 }) {
-    const [loading, setLoading] = useState(false);
     const [customerName, setCustomerName] = useState('');
-    const [pickupAddress, setPickupAddress] = useState('');
-    const [dropoffAddress, setDropoffAddress] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [pickup, setPickup] = useState({ address: '', coords: [28.3228, -15.3875] });
+    const [dropoff, setDropoff] = useState({ address: '', coords: [28.3228, -15.3875] });
     const [price, setPrice] = useState('');
     const [assignedDriverId, setAssignedDriverId] = useState<string>('');
+    const { toast } = useToast();
 
-    const handleCreateOrder = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // Sync with external updates from map pick
+    React.useEffect(() => {
+        if (externalPickup) setPickup(externalPickup);
+        if (externalDropoff) setDropoff(externalDropoff);
+    }, [externalPickup, externalDropoff]);
+
+    const handleCreateOrder = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!customerName || !pickup.address || !dropoff.address || !price) {
+            toast('Please fill in all required fields.', 'warning');
+            return;
+        }
+
         setLoading(true);
-
-        // Mock coordinates for Lusaka for the MVP demo (ST_MakePoint(lng, lat))
-        // In a real app, you'd geocode the addresses
-        const pickupLng = 28.3228 + (Math.random() - 0.5) * 0.05;
-        const pickupLat = -15.3875 + (Math.random() - 0.5) * 0.05;
-        const dropoffLng = 28.3228 + (Math.random() - 0.5) * 0.05;
-        const dropoffLat = -15.3875 + (Math.random() - 0.5) * 0.05;
 
         const { error } = await supabase.from('orders').insert([
             {
                 customer_name: customerName,
-                pickup_address: pickupAddress,
-                pickup_coords: `POINT(${pickupLng} ${pickupLat})`,
-                dropoff_address: dropoffAddress,
-                dropoff_coords: `POINT(${dropoffLng} ${dropoffLat})`,
+                pickup_address: pickup.address,
+                dropoff_address: dropoff.address,
+                pickup_coords: `POINT(${pickup.coords[0]} ${pickup.coords[1]})`,
+                dropoff_coords: `POINT(${dropoff.coords[0]} ${dropoff.coords[1]})`,
                 price_zmw: parseFloat(price),
-                assigned_driver_id: assignedDriverId || null,
-                status: assignedDriverId ? 'assigned' : 'pending'
+                status: assignedDriverId ? 'assigned' : 'pending',
+                assigned_driver_id: assignedDriverId || null
             }
         ]);
 
         if (!error) {
+            toast('Dispatch created successfully!', 'success');
             onClose();
-            // Reset form
             setCustomerName('');
-            setPickupAddress('');
-            setDropoffAddress('');
+            setPickup({ address: '', coords: [28.3228, -15.3875] });
+            setDropoff({ address: '', coords: [28.3228, -15.3875] });
             setPrice('');
             setAssignedDriverId('');
+        } else {
+            console.error('Error creating order:', error);
+            toast('Failed to create dispatch.', 'error');
         }
         setLoading(false);
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Create New Order</DialogTitle>
+            <DialogContent className="bg-card border-border text-foreground sm:max-w-[500px] rounded-[2.5rem] shadow-2xl backdrop-blur-2xl p-0 overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-accent opacity-50" />
+                <DialogHeader className="p-6 md:p-8 pb-4">
+                    <DialogTitle className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase leading-none">
+                        Manual <span className="text-accent italic">Dispatch</span>
+                    </DialogTitle>
+                    <DialogDescription className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-2">
+                        Create a new order bypass or manual assign
+                    </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleCreateOrder} className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <label className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Customer Name</label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
-                            <Input
-                                placeholder="e.g. Lusaka Logistics Center"
-                                className="pl-10 bg-black border-zinc-800"
-                                value={customerName}
-                                onChange={(e) => setCustomerName(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Pickup Address</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
-                            <Input
-                                placeholder="e.g. Cairo Road, Post Office"
-                                className="pl-10 bg-black border-zinc-800"
-                                value={pickupAddress}
-                                onChange={(e) => setPickupAddress(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Dropoff Address</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
-                            <Input
-                                placeholder="e.g. Manda Hill Shopping Mall"
-                                className="pl-10 bg-black border-zinc-800"
-                                value={dropoffAddress}
-                                onChange={(e) => setDropoffAddress(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Price (ZMW)</label>
+
+                <div className="p-6 md:p-8 pt-0 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                    <form onSubmit={handleCreateOrder} className="space-y-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2 px-1">
+                                <span className="w-1 h-3 bg-accent rounded-full" />
+                                Customer Details
+                            </label>
                             <div className="relative">
-                                <Banknote className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                 <Input
-                                    type="number"
-                                    placeholder="50"
-                                    className="pl-10 bg-black border-zinc-800"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                    required
+                                    placeholder="Customer Name"
+                                    className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50"
+                                    value={customerName}
+                                    onChange={(e) => setCustomerName(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Assign Driver</label>
-                            <Select value={assignedDriverId} onValueChange={setAssignedDriverId}>
-                                <SelectTrigger className="bg-black border-zinc-800">
-                                    <SelectValue placeholder="Optional" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    <SelectItem value="none">Unassigned</SelectItem>
-                                    {onlineDrivers.map(driver => (
-                                        <SelectItem key={driver.id} value={driver.id}>
-                                            {driver.full_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+                        <div className="space-y-4 pt-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Route configuration</label>
+                            <div className="space-y-3">
+                                <div className="relative">
+                                    <AddressSearch
+                                        placeholder="Set Pickup Point"
+                                        onSelect={(addr, coords) => setPickup({ address: addr, coords: coords as [number, number] })}
+                                        icon={<MapPin className="h-5 w-5 text-green-500" />}
+                                        initialValue={pickup.address}
+                                        key={`pickup-${pickup.address}`}
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <AddressSearch
+                                        placeholder="Set Dropoff Point"
+                                        onSelect={(addr, coords) => setDropoff({ address: addr, coords: coords as [number, number] })}
+                                        icon={<MapPin className="h-5 w-5 text-destructive" />}
+                                        initialValue={dropoff.address}
+                                        key={`dropoff-${dropoff.address}`}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <Button
-                        type="submit"
-                        className="w-full bg-white text-black hover:bg-zinc-200 h-12 font-bold"
-                        disabled={loading}
-                    >
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Dispatch Order'}
-                    </Button>
-                </form>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Fee (ZMW)</label>
+                                <div className="relative">
+                                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        type="number"
+                                        placeholder="Price"
+                                        className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Priority</label>
+                                <Select onValueChange={setAssignedDriverId}>
+                                    <SelectTrigger className="h-14 bg-secondary/30 border-border text-white rounded-2xl">
+                                        <SelectValue placeholder="Express" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-card border-border text-white">
+                                        <SelectItem value="none">Standard</SelectItem>
+                                        <SelectItem value="priority">High Priority</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full h-14 md:h-16 bg-accent text-white font-black rounded-2xl shadow-xl shadow-accent/20 border-b-6 border-accent/50 text-lg transition-all active:scale-95 mt-4"
+                            disabled={loading || !customerName || !pickup.address || !dropoff.address}
+                        >
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                                <>
+                                    CONFIRM DISPATCH
+                                    <ArrowRight className="ml-2 h-6 w-6" />
+                                </>
+                            )}
+                        </Button>
+                    </form>
+                </div>
             </DialogContent>
         </Dialog>
     );

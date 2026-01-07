@@ -16,8 +16,10 @@ export default function RootPage() {
             } else if (profile) {
                 if (profile.role === 'admin') {
                     router.push('/dashboard/admin');
-                } else {
+                } else if (profile.role === 'driver') {
                     router.push('/dashboard/driver');
+                } else {
+                    router.push('/dashboard/client');
                 }
             }
         }

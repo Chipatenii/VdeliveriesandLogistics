@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { ToastProvider } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,13 +11,16 @@ export const metadata: Metadata = {
     title: "V deliveries and Logistics",
     description: "Lusaka Delivery MVP",
     manifest: "/manifest.json", // For PWA
-    themeColor: "#000000",
+    themeColor: "#0b1120",
     viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
         title: "Vdeliveries",
     },
+    other: {
+        "mobile-web-app-capable": "yes",
+    }
 };
 
 export default function RootLayout({
@@ -25,12 +29,14 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className="dark">
+        <html lang="en" className="dark" suppressHydrationWarning>
             <body className={`${inter.className} bg-black text-white antialiased`}>
                 <AuthProvider>
-                    <LocationProvider>
-                        {children}
-                    </LocationProvider>
+                    <ToastProvider>
+                        <LocationProvider>
+                            {children}
+                        </LocationProvider>
+                    </ToastProvider>
                 </AuthProvider>
             </body>
         </html>

@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Lock, Mail, User, Bike, Loader2 } from 'lucide-react';
+import { Lock, Mail, User, Bike, Loader2, ArrowRight } from 'lucide-react';
 
 export default function SignupPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [role, setRole] = useState<'driver' | 'admin'>('driver');
+    const [role, setRole] = useState<'driver' | 'admin' | 'client'>('client');
     const [vehicleType, setVehicleType] = useState<string>('motorcycle');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -30,6 +30,8 @@ export default function SignupPage() {
             options: {
                 data: {
                     full_name: fullName,
+                    role: role,
+                    vehicle_type: role === 'driver' ? vehicleType : null,
                 }
             }
         });
@@ -41,127 +43,154 @@ export default function SignupPage() {
         }
 
         if (data.user) {
-            // Create profile record (usually handled by a trigger, but good to be explicit for MVP)
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([
-                    {
-                        id: data.user.id,
-                        email,
-                        full_name: fullName,
-                        role,
-                        vehicle_type: role === 'driver' ? vehicleType : null,
-                    }
-                ]);
-
-            if (profileError) {
-                setError(profileError.message);
-                setLoading(false);
-                return;
-            }
-
-            router.push(role === 'admin' ? '/dashboard/admin' : '/dashboard/driver');
+            if (role === 'admin') router.push('/dashboard/admin');
+            else if (role === 'driver') router.push('/dashboard/driver');
+            else router.push('/dashboard/client');
         }
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
-            <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
-                <CardHeader className="text-center">
-                    <CardTitle className="text-2xl font-bold text-white">Join V deliveries</CardTitle>
-                    <CardDescription className="text-zinc-500">Create your account to start delivering in Lusaka</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSignup} className="space-y-4">
-                        <div className="space-y-2">
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                <Input
-                                    placeholder="Full Name"
-                                    className="pl-10 bg-black border-zinc-800 text-white"
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                <Input
-                                    type="email"
-                                    placeholder="name@example.com"
-                                    className="pl-10 bg-black border-zinc-800 text-white"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                <Input
-                                    type="password"
-                                    placeholder="••••••••"
-                                    className="pl-10 bg-black border-zinc-800 text-white"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 antialiased">
+            <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 mb-4">
+                        <User className="h-8 w-8 text-accent" />
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tighter text-foreground">JOIN THE FLEET</h1>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-[0.2em] mt-2">Registration • V Deliveries</p>
+                </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs text-zinc-500 font-medium">I am a...</label>
-                            <Select value={role} onValueChange={(val: any) => setRole(val)}>
-                                <SelectTrigger className="bg-black border-zinc-800 text-white">
-                                    <SelectValue placeholder="Select role" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    <SelectItem value="driver">Driver (Moto/Car)</SelectItem>
-                                    <SelectItem value="admin">Admin / Fleet Manager</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {role === 'driver' && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label className="text-xs text-zinc-500 font-medium">Vehicle Type</label>
+                <Card className="bg-card/40 border-border backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden mb-12">
+                    <CardHeader className="pt-8 pb-4 text-center">
+                        <CardTitle className="text-xl font-black text-white px-6">Create Account</CardTitle>
+                        <CardDescription className="text-muted-foreground font-medium px-4">Join Lusaka's premium delivery network</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <form onSubmit={handleSignup} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
                                 <div className="relative">
-                                    <Bike className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                    <Select value={vehicleType} onValueChange={setVehicleType}>
-                                        <SelectTrigger className="pl-10 bg-black border-zinc-800 text-white">
-                                            <SelectValue placeholder="Select vehicle" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                                            <SelectItem value="car">Car</SelectItem>
-                                            <SelectItem value="bicycle">Bicycle</SelectItem>
-                                            <SelectItem value="van">Van</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Innocent Manda"
+                                        className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        required
+                                    />
                                 </div>
                             </div>
-                        )}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fleet Email</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        type="email"
+                                        placeholder="name@vdeliveries.com"
+                                        className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Security Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                        {error && <p className="text-red-500 text-xs text-center">{error}</p>}
-                        <Button
-                            type="submit"
-                            className="w-full bg-white text-black hover:bg-zinc-200 h-12 font-bold"
-                            disabled={loading}
-                        >
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Create Account'}
-                        </Button>
-                    </form>
-                    <div className="mt-6 text-center text-sm text-zinc-500">
-                        Already have an account?{' '}
-                        <button onClick={() => router.push('/login')} className="text-white hover:underline">
-                            Log In
-                        </button>
-                    </div>
-                </CardContent>
-            </Card>
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 text-center block">Account Type</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRole('client')}
+                                        className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${role === 'client' ? 'bg-accent/10 border-accent text-accent' : 'bg-secondary/30 border-border text-muted-foreground hover:border-muted-foreground/30'}`}
+                                    >
+                                        <User className="h-6 w-6" />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">Client</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRole('driver')}
+                                        className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${role === 'driver' ? 'bg-accent/10 border-accent text-accent' : 'bg-secondary/30 border-border text-muted-foreground hover:border-muted-foreground/30'}`}
+                                    >
+                                        <Bike className="h-6 w-6" />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">Driver</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRole('admin')}
+                                        className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${role === 'admin' ? 'bg-accent/10 border-accent text-accent' : 'bg-secondary/30 border-border text-muted-foreground hover:border-muted-foreground/30'}`}
+                                    >
+                                        <Lock className="h-6 w-6" />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">Admin</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {role === 'driver' && (
+                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Vehicle Specification</label>
+                                    <div className="relative">
+                                        <Bike className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                        <Select value={vehicleType} onValueChange={setVehicleType}>
+                                            <SelectTrigger className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium">
+                                                <SelectValue placeholder="Select vehicle" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-popover border-border rounded-2xl">
+                                                <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                                                <SelectItem value="car">Car</SelectItem>
+                                                <SelectItem value="bicycle">Bicycle</SelectItem>
+                                                <SelectItem value="van">Van</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )}
+
+                            {error && (
+                                <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-xl text-destructive text-xs font-bold text-center">
+                                    {error}
+                                </div>
+                            )}
+                            <Button
+                                type="submit"
+                                className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black rounded-2xl shadow-lg border-b-4 border-accent/50 transition-all active:scale-scale-95 text-lg"
+                                disabled={loading}
+                            >
+                                {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (
+                                    <>
+                                        START JOURNEY
+                                        <ArrowRight className="ml-2 h-5 w-5" />
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+                        <div className="mt-8 text-center pb-4">
+                            <p className="text-sm text-muted-foreground font-bold italic">
+                                ALREADY REGISTERED?{' '}
+                                <button
+                                    onClick={() => router.push('/login')}
+                                    className="text-accent hover:text-accent/80 transition-colors uppercase ml-1 tracking-tighter"
+                                >
+                                    Log In
+                                </button>
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }
