@@ -79,6 +79,7 @@ export default function SignupPage() {
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         placeholder="Innocent Manda"
+                                        autoComplete="name"
                                         className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
@@ -93,6 +94,7 @@ export default function SignupPage() {
                                     <Input
                                         type="email"
                                         placeholder="name@vdeliveries.com"
+                                        autoComplete="email"
                                         className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -107,6 +109,7 @@ export default function SignupPage() {
                                     <Input
                                         type="password"
                                         placeholder="••••••••"
+                                        autoComplete="new-password"
                                         className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}

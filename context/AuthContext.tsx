@@ -21,42 +21,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const router = useRouter();
 
     useEffect(() => {
-        // Check active sessions and sets the user
-        const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user ?? null);
+        // Initial session check
+        const getInitialSession = async () => {
+            try {
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-            if (session?.user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-                setProfile(profile);
+                if (sessionError) throw sessionError;
+
+                setUser(session?.user ?? null);
+
+                if (session?.user) {
+                    const { data: profileData, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching profile:', profileError);
+                    } else {
+                        setProfile(profileData);
+                    }
+                }
+            } catch (err) {
+                console.error('Auth initialization error:', err);
+                setUser(null);
+                setProfile(null);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
-        getSession();
+        getInitialSession();
 
-        // Listen for changes on auth state (logged in, signed out, etc.)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        // Listen for changes on auth state
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state change:', event, session?.user?.id);
+
             setUser(session?.user ?? null);
+
             if (session?.user) {
-                const { data: profile } = await supabase
+                const { data: profileData, error: profileError } = await supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)
                     .single();
-                setProfile(profile);
+
+                if (profileError) {
+                    console.error('Error fetching profile on state change:', profileError);
+                } else {
+                    setProfile(profileData);
+                }
             } else {
                 setProfile(null);
             }
+
             setLoading(false);
         });
 
         return () => subscription.unsubscribe();
     }, []);
+
 
     const signOut = async () => {
         await supabase.auth.signOut();

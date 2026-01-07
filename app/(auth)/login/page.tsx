@@ -74,6 +74,7 @@ export default function LoginPage() {
                                     <Input
                                         type="email"
                                         placeholder="admin@vdeliveries.com"
+                                        autoComplete="email"
                                         className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -88,6 +89,7 @@ export default function LoginPage() {
                                     <Input
                                         type="password"
                                         placeholder="••••••••"
+                                        autoComplete="current-password"
                                         className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent transition-all font-medium"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
