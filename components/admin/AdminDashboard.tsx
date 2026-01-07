@@ -194,7 +194,7 @@ export default function AdminDashboard() {
                     isOpen={isOrderModalOpen}
                     onClose={() => setIsOrderModalOpen(false)}
                     onlineDrivers={drivers}
-                    onPickFromMap={(type) => {
+                    onPickFromMap={(type: 'pickup' | 'dropoff') => {
                         setIsOrderModalOpen(false);
                         setPickingMode({ type, active: true });
                     }}
