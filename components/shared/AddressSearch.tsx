@@ -10,14 +10,22 @@ interface AddressSearchProps {
     onSelect: (address: string, coords: number[]) => void;
     placeholder?: string;
     icon?: React.ReactNode;
+    initialValue?: string;
 }
 
-export default function AddressSearch({ onSelect, placeholder, icon }: AddressSearchProps) {
-    const [query, setQuery] = useState('');
+export default function AddressSearch({ onSelect, placeholder, icon, initialValue }: AddressSearchProps) {
+    const [query, setQuery] = useState(initialValue || '');
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Sync query when initialValue changes (e.g. from map pick)
+    useEffect(() => {
+        if (initialValue !== undefined) {
+            setQuery(initialValue);
+        }
+    }, [initialValue]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
