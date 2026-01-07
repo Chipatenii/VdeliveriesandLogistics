@@ -13,11 +13,15 @@ import { useToast } from '@/components/ui/toaster';
 export default function CreateOrderModal({
     isOpen,
     onClose,
+    onlineDrivers = [],
+    onPickFromMap,
     externalPickup,
     externalDropoff
 }: {
     isOpen: boolean,
     onClose: () => void,
+    onlineDrivers?: any[],
+    onPickFromMap?: (type: 'pickup' | 'dropoff') => void,
     externalPickup?: { address: string, coords: [number, number] },
     externalDropoff?: { address: string, coords: [number, number] }
 }) {
@@ -52,8 +56,8 @@ export default function CreateOrderModal({
                 pickup_coords: `POINT(${pickup.coords[0]} ${pickup.coords[1]})`,
                 dropoff_coords: `POINT(${dropoff.coords[0]} ${dropoff.coords[1]})`,
                 price_zmw: parseFloat(price),
-                status: assignedDriverId ? 'assigned' : 'pending',
-                assigned_driver_id: assignedDriverId || null
+                status: assignedDriverId && assignedDriverId !== 'none' ? 'assigned' : 'pending',
+                assigned_driver_id: (assignedDriverId && assignedDriverId !== 'none') ? assignedDriverId : null
             }
         ]);
 
@@ -106,23 +110,45 @@ export default function CreateOrderModal({
                         <div className="space-y-4 pt-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Route configuration</label>
                             <div className="space-y-3">
-                                <div className="relative">
-                                    <AddressSearch
-                                        placeholder="Set Pickup Point"
-                                        onSelect={(addr, coords) => setPickup({ address: addr, coords: coords as [number, number] })}
-                                        icon={<MapPin className="h-5 w-5 text-green-500" />}
-                                        initialValue={pickup.address}
-                                        key={`pickup-${pickup.address}`}
-                                    />
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <AddressSearch
+                                            placeholder="Set Pickup Point"
+                                            onSelect={(addr, coords) => setPickup({ address: addr, coords: coords as [number, number] })}
+                                            icon={<MapPin className="h-5 w-5 text-green-500" />}
+                                            initialValue={pickup.address}
+                                            key={`pickup-${pickup.address}`}
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-14 w-14 rounded-2xl border border-border bg-secondary/20 text-accent hover:bg-accent/10 transition-all"
+                                        onClick={() => onPickFromMap?.('pickup')}
+                                    >
+                                        <Navigation className="h-5 w-5" />
+                                    </Button>
                                 </div>
-                                <div className="relative">
-                                    <AddressSearch
-                                        placeholder="Set Dropoff Point"
-                                        onSelect={(addr, coords) => setDropoff({ address: addr, coords: coords as [number, number] })}
-                                        icon={<MapPin className="h-5 w-5 text-destructive" />}
-                                        initialValue={dropoff.address}
-                                        key={`dropoff-${dropoff.address}`}
-                                    />
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <AddressSearch
+                                            placeholder="Set Dropoff Point"
+                                            onSelect={(addr, coords) => setDropoff({ address: addr, coords: coords as [number, number] })}
+                                            icon={<MapPin className="h-5 w-5 text-destructive" />}
+                                            initialValue={dropoff.address}
+                                            key={`dropoff-${dropoff.address}`}
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-14 w-14 rounded-2xl border border-border bg-secondary/20 text-accent hover:bg-accent/10 transition-all"
+                                        onClick={() => onPickFromMap?.('dropoff')}
+                                    >
+                                        <Navigation className="h-5 w-5" />
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -142,14 +168,18 @@ export default function CreateOrderModal({
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Priority</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Assign Driver</label>
                                 <Select onValueChange={setAssignedDriverId}>
                                     <SelectTrigger className="h-14 bg-secondary/30 border-border text-white rounded-2xl">
-                                        <SelectValue placeholder="Express" />
+                                        <SelectValue placeholder="Broadcast (Auto)" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-card border-border text-white">
-                                        <SelectItem value="none">Standard</SelectItem>
-                                        <SelectItem value="priority">High Priority</SelectItem>
+                                        <SelectItem value="none">Broadcast (Auto)</SelectItem>
+                                        {onlineDrivers.filter(d => d.is_online).map(driver => (
+                                            <SelectItem key={driver.id} value={driver.id}>
+                                                {driver.full_name} ({driver.vehicle_type})
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>

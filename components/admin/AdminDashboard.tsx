@@ -24,8 +24,8 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [pickingMode, setPickingMode] = useState<{ type: 'pickup' | 'dropoff', active: boolean }>({ type: 'pickup', active: false });
-    const [externalPickup, setExternalPickup] = useState<{ address: string, coords: [number, number] } | null>(null);
-    const [externalDropoff, setExternalDropoff] = useState<{ address: string, coords: [number, number] } | null>(null);
+    const [externalPickup, setExternalPickup] = useState<{ address: string, coords: [number, number] } | undefined>(undefined);
+    const [externalDropoff, setExternalDropoff] = useState<{ address: string, coords: [number, number] } | undefined>(undefined);
 
     useEffect(() => {
         // ... (existing useEffect logic same as before)
