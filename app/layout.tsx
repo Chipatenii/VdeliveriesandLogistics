@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { LocationProvider } from "@/context/LocationContext";
@@ -7,12 +7,18 @@ import { ToastProvider } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+    themeColor: "#0b1120",
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+};
+
 export const metadata: Metadata = {
     title: "V deliveries and Logistics",
     description: "Lusaka Delivery MVP",
     manifest: "/manifest.json", // For PWA
-    themeColor: "#0b1120",
-    viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
