@@ -71,7 +71,35 @@ export default function PayrollView() {
     }, [authLoading, user]);
 
 
+    const exportToCSV = () => {
+        if (stats.length === 0) return;
+
+        const headers = ["Driver ID", "Full Name", "Total Earned (ZMW)", "Deliveries", "Pending Payout (ZMW)"];
+        const rows = stats.map(s => [
+            s.driver_id,
+            s.full_name,
+            s.total_earned,
+            s.deliveries,
+            s.pending_payout
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `payroll_report_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const totalFleetEarnings = stats.reduce((acc, s) => acc + s.total_earned, 0);
+    const totalPendingPayouts = stats.reduce((acc, s) => acc + s.pending_payout, 0);
 
     return (
         <div className="space-y-8">
@@ -83,11 +111,16 @@ export default function PayrollView() {
                         Financial Settlement Overview
                     </p>
                 </div>
-                <Button className="bg-secondary hover:bg-secondary/80 text-white font-black px-6 h-12 rounded-2xl border border-border transition-all active:scale-95">
+                <Button
+                    onClick={exportToCSV}
+                    disabled={stats.length === 0}
+                    className="bg-secondary hover:bg-secondary/80 text-white font-black px-6 h-12 rounded-2xl border border-border transition-all active:scale-95"
+                >
                     <Download className="h-4 w-4 mr-2" />
                     EXPORT REPORT
                 </Button>
             </div>
+
 
             {/* Financial KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -112,7 +145,7 @@ export default function PayrollView() {
                                 <Clock className="h-4 w-4 text-accent" />
                             </div>
                         </div>
-                        <p className="text-3xl font-black text-white">ZMW {totalFleetEarnings.toLocaleString()}</p>
+                        <p className="text-3xl font-black text-white">ZMW {totalPendingPayouts.toLocaleString()}</p>
                         <p className="text-[10px] text-accent font-bold mt-2">REQUIRES APPROVAL</p>
                     </CardContent>
                 </Card>

@@ -21,9 +21,13 @@ export default function RootPage() {
                 } else {
                     router.push('/dashboard/client');
                 }
+            } else {
+                // User is logged in but no profile found - redirect to login to clear stale session or signup
+                router.push('/login');
             }
         }
     }, [user, profile, loading, router]);
+
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-black">

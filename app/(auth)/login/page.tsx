@@ -15,37 +15,63 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+    React.useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user?.id)
+                    .single();
+
+                if (profile?.role === 'admin') {
+                    router.push('/dashboard/admin');
+                } else {
+                    router.push('/dashboard/driver');
+                }
+            }
+        };
+        checkUser();
+    }, [router]);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
-            if (error.message.includes('Email not confirmed')) {
-                setError('Please verify your email address. Check your inbox for a confirmation link.');
-            } else {
-                setError(error.message);
+            if (error) {
+                if (error.message.includes('Email not confirmed')) {
+                    setError('Please verify your email address. Check your inbox for a confirmation link.');
+                } else {
+                    setError(error.message);
+                }
+                setLoading(false);
+                return;
             }
+
+            // Fetch profile to redirect based on role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', data.user?.id)
+                .single();
+
+            if (profile?.role === 'admin') {
+                router.push('/dashboard/admin');
+            } else {
+                router.push('/dashboard/driver');
+            }
+        } catch (err: any) {
+            console.error('Login error:', err);
+            setError(err.message || 'An unexpected error occurred during login.');
             setLoading(false);
-            return;
-        }
-
-        // Fetch profile to redirect based on role
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.user?.id)
-            .single();
-
-        if (profile?.role === 'admin') {
-            router.push('/dashboard/admin');
-        } else {
-            router.push('/dashboard/driver');
         }
     };
 

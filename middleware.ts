@@ -18,16 +18,6 @@ export async function middleware(req: NextRequest) {
                     return req.cookies.get(name)?.value;
                 },
                 set(name: string, value: string, options: CookieOptions) {
-                    req.cookies.set({
-                        name,
-                        value,
-                        ...options,
-                    });
-                    res = NextResponse.next({
-                        request: {
-                            headers: req.headers,
-                        },
-                    });
                     res.cookies.set({
                         name,
                         value,
@@ -35,16 +25,6 @@ export async function middleware(req: NextRequest) {
                     });
                 },
                 remove(name: string, options: CookieOptions) {
-                    req.cookies.set({
-                        name,
-                        value: '',
-                        ...options,
-                    });
-                    res = NextResponse.next({
-                        request: {
-                            headers: req.headers,
-                        },
-                    });
                     res.cookies.set({
                         name,
                         value: '',
@@ -60,6 +40,19 @@ export async function middleware(req: NextRequest) {
     } = await supabase.auth.getSession();
 
     const url = req.nextUrl.clone();
+
+    // If user is already signed in and trying to access login/signup
+    if (session && (url.pathname === '/login' || url.pathname === '/signup')) {
+        // Fetch profile to redirect based on role
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+        url.pathname = profile?.role === 'admin' ? '/dashboard/admin' : '/dashboard/driver';
+        return NextResponse.redirect(url);
+    }
 
     // If user is not signed in and trying to access restricted areas
     if (!session && url.pathname.startsWith('/dashboard')) {

@@ -39,9 +39,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     if (profileError) {
                         console.error('Error fetching profile:', profileError);
+                        setProfile(null);
                     } else {
                         setProfile(profileData);
                     }
+                } else {
+                    setProfile(null);
                 }
             } catch (err) {
                 console.error('Auth initialization error:', err);
@@ -69,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 if (profileError) {
                     console.error('Error fetching profile on state change:', profileError);
+                    setProfile(null);
                 } else {
                     setProfile(profileData);
                 }

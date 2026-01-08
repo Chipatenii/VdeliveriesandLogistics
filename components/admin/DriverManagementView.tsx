@@ -14,10 +14,19 @@ import {
     Search,
     Filter,
     AlertCircle,
-
     Copy,
-    Check
+    Check,
+    ArrowRight,
+    ExternalLink
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -38,6 +47,9 @@ export default function DriverManagementView() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [schemaError, setSchemaError] = useState<string | null>(null);
+    const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
+
 
     useEffect(() => {
         const fetchAllDrivers = async () => {
@@ -90,6 +102,14 @@ export default function DriverManagementView() {
         }
     };
 
+    const copyOnboardingLink = () => {
+        const link = `${window.location.origin}/signup?role=driver`;
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+
     return (
         <div className="space-y-8">
             {schemaError === "MISSING_CREATED_AT" && (
@@ -132,12 +152,68 @@ export default function DriverManagementView() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <Button className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-white font-black px-6 h-12 rounded-xl shadow-lg shadow-accent/20 transition-all active:scale-95">
+                    <Button
+                        onClick={() => setIsOnboardModalOpen(true)}
+                        className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-white font-black px-6 h-12 rounded-xl shadow-lg shadow-accent/20 transition-all active:scale-95"
+                    >
                         <UserPlus className="h-4 w-4 mr-2" />
                         ONBOARD DRIVER
                     </Button>
                 </div>
             </div>
+
+            <Dialog open={isOnboardModalOpen} onOpenChange={setIsOnboardModalOpen}>
+                <DialogContent className="bg-card border-border text-foreground sm:max-w-[450px] rounded-[2.5rem] shadow-2xl backdrop-blur-2xl p-0 overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-1.5 bg-accent opacity-50" />
+                    <DialogHeader className="p-8 pb-4">
+                        <DialogTitle className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
+                            Onboard <span className="text-accent italic">Driver</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest pt-2">
+                            Add a new member to the logistics network
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="p-8 pt-0 space-y-6">
+                        <div className="bg-secondary/20 border border-border/50 rounded-2xl p-6">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Registration Link</p>
+                            <div className="flex gap-2">
+                                <Input
+                                    readOnly
+                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/signup?role=driver`}
+                                    className="bg-black/20 border-border text-[10px] font-mono h-12 rounded-xl"
+                                />
+                                <Button
+                                    onClick={copyOnboardingLink}
+                                    variant="outline"
+                                    className="h-12 w-12 rounded-xl border-border bg-secondary/50"
+                                >
+                                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                            <p className="text-[9px] text-muted-foreground mt-3 font-bold uppercase tracking-widest">Send this link to the driver to start the registration process</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <Button
+                                onClick={() => window.open('/signup?role=driver', '_blank')}
+                                className="w-full h-14 bg-accent text-white font-black rounded-xl shadow-xl shadow-accent/20 text-[10px] tracking-[0.2em] uppercase transition-all active:scale-95"
+                            >
+                                Open Registration Form
+                                <ExternalLink className="ml-2 h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsOnboardModalOpen(false)}
+                                className="w-full h-12 text-muted-foreground font-black text-[10px] tracking-widest uppercase"
+                            >
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
 
             {/* Driver Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
