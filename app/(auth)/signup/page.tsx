@@ -51,7 +51,8 @@ export default function SignupPage() {
 
             if (role === 'admin') router.push('/dashboard/admin');
             else if (role === 'driver') router.push('/dashboard/driver');
-            else router.push('/dashboard/client');
+            else if (role === 'client') router.push('/dashboard/client');
+            else router.push('/dashboard/driver'); // Fallback
         }
     };
 
@@ -175,7 +176,7 @@ export default function SignupPage() {
                             )}
                             <Button
                                 type="submit"
-                                className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black rounded-2xl shadow-lg border-b-4 border-accent/50 transition-all active:scale-scale-95 text-lg"
+                                className="w-full h-14 bg-accent hover:bg-accent/90 text-white font-black rounded-2xl shadow-lg border-b-4 border-accent/50 transition-all active:scale-95 text-lg"
                                 disabled={loading}
                             >
                                 {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (

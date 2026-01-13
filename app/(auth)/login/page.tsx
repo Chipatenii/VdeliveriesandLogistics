@@ -15,25 +15,7 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    React.useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user?.id)
-                    .single();
-
-                if (profile?.role === 'admin') {
-                    router.push('/dashboard/admin');
-                } else {
-                    router.push('/dashboard/driver');
-                }
-            }
-        };
-        checkUser();
-    }, [router]);
+    // Redundant client-side redirect removed. Handled by middleware.
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
