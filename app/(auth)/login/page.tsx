@@ -15,35 +15,44 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    // Redundant client-side redirect removed. Handled by middleware.
-
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email: email.trim(),
+                password: password,
             });
 
-            if (error) {
-                if (error.message.includes('Email not confirmed')) {
-                    setError('Please verify your email address. Check your inbox for a confirmation link.');
-                } else {
-                    setError(error.message);
-                }
+            if (signInError) {
+                setError(signInError.message.includes('Email not confirmed')
+                    ? 'Please verify your email address.'
+                    : signInError.message);
+                setLoading(false);
+                return;
+            }
+
+            if (!data.user) {
+                setError('Login failed. Please try again.');
                 setLoading(false);
                 return;
             }
 
             // Fetch profile to redirect based on role
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('role')
-                .eq('id', data.user?.id)
+                .eq('id', data.user.id)
                 .single();
+
+            if (profileError) {
+                console.error('Profile fetch error:', profileError);
+                // Fallback: the middleware will handle unauthorized access
+                router.push('/dashboard/driver');
+                return;
+            }
 
             if (profile?.role === 'admin') {
                 router.push('/dashboard/admin');
@@ -53,8 +62,8 @@ export default function LoginPage() {
                 router.push('/dashboard/driver');
             }
         } catch (err: any) {
-            console.error('Login error:', err);
-            setError(err.message || 'An unexpected error occurred during login.');
+            console.error('Unexpected login error:', err);
+            setError('A system error occurred. Please refresh and try again.');
             setLoading(false);
         }
     };
