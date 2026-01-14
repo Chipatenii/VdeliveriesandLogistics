@@ -58,7 +58,13 @@ export async function middleware(req: NextRequest) {
             .eq('id', session.user.id)
             .single();
 
-        const role = profile?.role || 'driver'; // Default to driver if fetching fails
+        // If no profile exists, they might be in the middle of signup or something is wrong
+        if (!profile && !isAuthPage) {
+            // Check if they are authorized to be here
+            return NextResponse.next();
+        }
+
+        const role = profile?.role;
 
         // 3. Prevent authenticated users from visiting login/signup
         if (isAuthPage) {
@@ -70,6 +76,12 @@ export async function middleware(req: NextRequest) {
 
         // 4. Role-based route protection
         if (isDashboardPage) {
+            // If they have no role yet, they shouldn't be in the dashboard
+            if (!role) {
+                url.pathname = '/login';
+                return NextResponse.redirect(url);
+            }
+
             if (url.pathname.startsWith('/dashboard/admin') && role !== 'admin') {
                 url.pathname = '/dashboard/driver';
                 return NextResponse.redirect(url);
