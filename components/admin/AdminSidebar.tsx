@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import ProfileModal from '@/components/shared/ProfileModal';
 
 export type AdminView = 'overview' | 'fleet' | 'payroll' | 'drivers' | 'settings';
 
@@ -26,6 +27,7 @@ interface SidebarProps {
 export default function AdminSidebar({ activeView, onViewChange }: SidebarProps) {
     const { signOut, profile } = useAuth();
     const [isCollapsed, setIsCollapsed] = React.useState(false);
+    const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
     const navItems = [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -94,10 +96,13 @@ export default function AdminSidebar({ activeView, onViewChange }: SidebarProps)
             {/* User Profile & Logout - Icons only on mobile */}
             <div className="flex flex-row md:flex-col items-center md:p-4 border-l md:border-l-0 md:border-t border-border/50 md:space-y-4 px-2">
                 {!isCollapsed && (
-                    <div className="hidden md:block w-full px-4 py-3 bg-secondary/30 rounded-2xl border border-border/50">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Logged in</p>
+                    <button
+                        onClick={() => setIsProfileOpen(true)}
+                        className="hidden md:block w-full px-4 py-3 bg-secondary/30 rounded-2xl border border-border/50 hover:bg-secondary/50 transition-all text-left group"
+                    >
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-accent transition-colors">Logged in</p>
                         <p className="text-xs font-bold text-white mt-1 truncate">{profile?.full_name?.toUpperCase()}</p>
-                    </div>
+                    </button>
                 )}
                 <Button
                     variant="ghost"
@@ -111,6 +116,11 @@ export default function AdminSidebar({ activeView, onViewChange }: SidebarProps)
                     {!isCollapsed && <span className="hidden md:inline font-black tracking-tighter uppercase">LOGOUT</span>}
                 </Button>
             </div>
+
+            <ProfileModal
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+            />
         </aside>
     );
 }

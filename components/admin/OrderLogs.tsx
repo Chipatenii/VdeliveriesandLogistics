@@ -7,45 +7,11 @@ import { ScrollText, Package, CheckCircle2, User, MapPin, Activity } from 'lucid
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
+import { getOrderStatusStyles, formatZMW, formatDateTime } from '@/lib/utils';
+import { useOrders } from '@/hooks/useOrders';
+
 export default function OrderLogs() {
-    const { loading: authLoading, user } = useAuth();
-    const [logs, setLogs] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchLogs = async () => {
-        if (authLoading || !user) return;
-
-        const { data, error } = await supabase
-            .from('orders')
-            .select(`
-        *,
-        driver:profiles!assigned_driver_id(full_name)
-      `)
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (!error && data) {
-            setLogs(data);
-        }
-        setLoading(false);
-    };
-
-    useEffect(() => {
-        if (authLoading || !user) return;
-
-        fetchLogs();
-
-        const channel = supabase
-            .channel('admin-logs')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-                fetchLogs();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [authLoading, user]);
+    const { orders: logs, loading } = useOrders();
 
     if (loading) return null;
 
@@ -81,15 +47,13 @@ export default function OrderLogs() {
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-1">
                                             <p className="text-[10px] text-muted-foreground font-mono font-bold">
-                                                {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.created_at).toLocaleDateString()}
+                                                {formatDateTime(log.created_at).time} • {formatDateTime(log.created_at).date}
                                             </p>
                                             <p className="text-sm font-black text-white tracking-tight leading-tight">{log.customer_name.toUpperCase()}</p>
                                         </div>
                                         <div className={cn(
                                             "inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em]",
-                                            log.status === 'delivered' ? "bg-green-500/10 text-green-500 border border-green-500/20" :
-                                                log.status === 'assigned' || log.status === 'picked_up' ? "bg-accent/10 text-accent border border-accent/20" :
-                                                    "bg-secondary/50 text-muted-foreground border border-border"
+                                            getOrderStatusStyles(log.status)
                                         )}>
                                             {log.status.replace('_', ' ')}
                                         </div>
@@ -107,7 +71,7 @@ export default function OrderLogs() {
                                                 {log.driver?.full_name?.toUpperCase() || "UNASSIGNED"}
                                             </p>
                                         </div>
-                                        <p className="text-sm font-black text-accent tracking-tighter">K {log.price_zmw.toLocaleString()}</p>
+                                        <p className="text-sm font-black text-accent tracking-tighter">{formatZMW(log.price_zmw)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -130,7 +94,7 @@ export default function OrderLogs() {
                                     <tr key={log.id} className="hover:bg-accent/5 transition-all group border-l-4 border-l-transparent hover:border-l-accent">
                                         <td className="px-8 py-6">
                                             <p className="text-xs text-white font-mono font-bold">
-                                                {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {formatDateTime(log.created_at).time}
                                             </p>
                                         </td>
                                         <td className="px-8 py-6">

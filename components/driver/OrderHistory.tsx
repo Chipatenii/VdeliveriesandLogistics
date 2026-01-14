@@ -6,43 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { History, CheckCircle2, XCircle, Clock, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { getOrderStatusStyles, formatZMW, formatDateTime } from '@/lib/utils';
+import { useOrders } from '@/hooks/useOrders';
+
 export default function OrderHistory({ driverId }: { driverId: string }) {
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchHistory = async () => {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .eq('assigned_driver_id', driverId)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            if (!error && data) {
-                setHistory(data);
-            }
-            setLoading(false);
-        };
-
-        fetchHistory();
-
-        const channel = supabase
-            .channel(`history-${driverId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'orders',
-                filter: `assigned_driver_id=eq.${driverId}`
-            }, () => {
-                fetchHistory();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [driverId]);
+    const { orders: history, loading } = useOrders({ driverId });
 
     if (loading) return null;
 
@@ -85,21 +53,19 @@ export default function OrderHistory({ driverId }: { driverId: string }) {
                                     <p className="text-[10px] text-muted-foreground font-medium truncate italic tracking-tight">{order.dropoff_address}</p>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="text-[10px] text-muted-foreground/40 font-mono">
-                                            {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatDateTime(order.created_at).time}
                                         </span>
                                         <span className="h-1 w-1 bg-border rounded-full" />
                                         <span className="text-[10px] text-muted-foreground/40 font-bold uppercase tracking-tighter">
-                                            {new Date(order.created_at).toLocaleDateString()}
+                                            {formatDateTime(order.created_at).date}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 ml-4">
-                                    <p className="font-black text-lg text-white tracking-tighter leading-none">K {Number(order.price_zmw).toFixed(0)}</p>
+                                    <p className="font-black text-lg text-white tracking-tighter leading-none">{formatZMW(order.price_zmw)}</p>
                                     <div className={cn(
                                         "flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.15em] px-3 py-1 rounded-full border shadow-sm",
-                                        order.status === 'delivered' ? "text-green-500 bg-green-500/10 border-green-500/20" :
-                                            order.status === 'cancelled' ? "text-destructive bg-destructive/10 border-destructive/20" :
-                                                "text-accent bg-accent/10 border-accent/20"
+                                        getOrderStatusStyles(order.status)
                                     )}>
                                         {order.status === 'delivered' && <CheckCircle2 className="h-2.5 w-2.5" />}
                                         {order.status === 'cancelled' && <XCircle className="h-2.5 w-2.5" />}

@@ -25,6 +25,9 @@ import {
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
+import { useLocation } from '@/context/LocationContext';
+import AddressSearch from '../shared/AddressSearch';
+import { calculatePrice, VEHICLE_MULTIPLIERS } from '@/lib/pricing';
 
 interface CreateBookingModalProps {
     isOpen: boolean;
@@ -33,9 +36,11 @@ interface CreateBookingModalProps {
 }
 
 export default function CreateBookingModal({ isOpen, onClose, clientId }: CreateBookingModalProps) {
+    const { getCurrentPosition } = useLocation();
     const [step, setStep] = useState(1);
-    const [pickup, setPickup] = useState('');
-    const [dropoff, setDropoff] = useState('');
+    const [pickup, setPickup] = useState({ address: '', coords: [0, 0] });
+    const [dropoff, setDropoff] = useState({ address: '', coords: [0, 0] });
+    const [settings, setSettings] = useState({ baseFee: 25, kmRate: 5.5 });
     const [receiverName, setReceiverName] = useState('');
     const [receiverPhone, setReceiverPhone] = useState('');
     const [itemDesc, setItemDesc] = useState('');
@@ -53,11 +58,8 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
         { id: 'van', name: 'Cargo V', icon: <Package className="h-6 w-6" />, multiplier: 5, desc: 'Bulk or heavy shipments' },
     ];
 
-    const [baseFee, setBaseFee] = useState(25);
-    const [kmRate, setKmRate] = useState(5.5);
-
     useEffect(() => {
-        const fetchPricing = async () => {
+        const fetchSettings = async () => {
             const { data } = await supabase
                 .from('system_settings')
                 .select('key, value')
@@ -66,20 +68,37 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
             if (data) {
                 const base = data.find(s => s.key === 'base_delivery_fee');
                 const km = data.find(s => s.key === 'km_rate');
-                if (base) setBaseFee(Number(base.value));
-                if (km) setKmRate(Number(km.value));
+                setSettings({
+                    baseFee: base ? parseFloat(base.value) : 25,
+                    kmRate: km ? parseFloat(km.value) : 5.5
+                });
             }
         };
-        fetchPricing();
+        fetchSettings();
     }, []);
 
     const getPrice = () => {
-        if (!pickup || !dropoff) return 0;
-        // Basic calculation logic: Base Fee + (Address Length Proxy * KM Rate)
-        // Note: In a real app, this would use a distance matrix API
-        const distanceProxy = (pickup.length + dropoff.length) / 10;
-        const multiplier = vehicles.find(v => v.id === vehicleType)?.multiplier || 1;
-        return Math.round((baseFee + (distanceProxy * kmRate)) * multiplier);
+        if (!pickup.address || !dropoff.address) return 0;
+        const distanceProxy = Math.max(2, (pickup.address.length + dropoff.address.length) / 10);
+        return calculatePrice({
+            baseFee: settings.baseFee,
+            perKmRate: settings.kmRate,
+            vehicleMultiplier: VEHICLE_MULTIPLIERS[vehicleType] || 1,
+            distanceKm: distanceProxy
+        });
+    };
+
+    const handleUseCurrentLocation = async () => {
+        setLoading(true);
+        const coords = await getCurrentPosition();
+        if (coords) {
+            const addr = `My Location (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`;
+            setPickup({ address: addr, coords: [coords.longitude, coords.latitude] });
+            toast("Location acquired", "success");
+        } else {
+            toast("Could not get location", "error");
+        }
+        setLoading(false);
     };
 
     const handleCreateOrder = async () => {
@@ -91,10 +110,10 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
             .insert({
                 client_id: clientId,
                 customer_name: 'Client',
-                pickup_address: pickup,
-                dropoff_address: dropoff,
-                pickup_coords: 'POINT(28.2833 -15.4167)',
-                dropoff_coords: 'POINT(28.3167 -15.4333)',
+                pickup_address: pickup.address,
+                dropoff_address: dropoff.address,
+                pickup_coords: `POINT(${pickup.coords[0]} ${pickup.coords[1]})`,
+                dropoff_coords: `POINT(${dropoff.coords[0]} ${dropoff.coords[1]})`,
                 price_zmw: price,
                 status: 'pending',
                 vehicle_type_required: vehicleType,
@@ -102,25 +121,28 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
                 receiver_phone: receiverPhone,
                 item_description: itemDesc,
                 payment_method: paymentMethod,
-                scheduled_for: scheduledFor === 'now' ? new Date().toISOString() : null, // Simplification for 'later'
+                scheduled_for: scheduledFor === 'now' ? new Date().toISOString() : null,
                 driver_notes: notes
             });
 
         setLoading(false);
         if (!error) {
             setSuccess(true);
+            toast("Order placed successfully", "success");
             setTimeout(() => {
                 onClose();
                 resetForm();
             }, 2000);
+        } else {
+            toast("Failed to create order", "error");
         }
     };
 
     const resetForm = () => {
         setSuccess(false);
         setStep(1);
-        setPickup('');
-        setDropoff('');
+        setPickup({ address: '', coords: [0, 0] });
+        setDropoff({ address: '', coords: [0, 0] });
         setReceiverName('');
         setReceiverPhone('');
         setItemDesc('');
@@ -162,33 +184,41 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
                                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
                                     <div className="space-y-4">
                                         <div className="space-y-2 group">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Pickup Station</label>
+                                            <div className="flex justify-between items-center ml-1">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pickup Station</label>
+                                                <button
+                                                    onClick={handleUseCurrentLocation}
+                                                    type="button"
+                                                    className="text-[9px] font-black uppercase tracking-widest text-accent hover:underline"
+                                                >
+                                                    Use Current Location
+                                                </button>
+                                            </div>
                                             <div className="relative">
-                                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-accent" />
-                                                <Input
+                                                <AddressSearch
                                                     placeholder="Where from?"
-                                                    className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent font-medium"
-                                                    value={pickup}
-                                                    onChange={(e) => setPickup(e.target.value)}
+                                                    initialValue={pickup.address}
+                                                    onSelect={(addr, coords) => setPickup({ address: addr, coords })}
+                                                    icon={<MapPin className="h-5 w-5 text-accent" />}
                                                 />
                                             </div>
                                         </div>
+
                                         <div className="space-y-2 group">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Delivery Destination</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Destination</label>
                                             <div className="relative">
-                                                <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-accent" />
-                                                <Input
+                                                <AddressSearch
                                                     placeholder="Where to?"
-                                                    className="h-14 pl-12 bg-secondary/30 border-border text-white rounded-2xl focus:ring-accent/50 focus:border-accent font-medium"
-                                                    value={dropoff}
-                                                    onChange={(e) => setDropoff(e.target.value)}
+                                                    initialValue={dropoff.address}
+                                                    onSelect={(addr, coords) => setDropoff({ address: addr, coords })}
+                                                    icon={<Navigation className="h-5 w-5 text-accent" />}
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                     <Button
                                         className="w-full h-14 md:h-16 bg-accent text-white font-black rounded-2xl shadow-xl shadow-accent/20 border-b-6 border-accent/50 text-lg"
-                                        disabled={!pickup || !dropoff}
+                                        disabled={!pickup.address || !dropoff.address}
                                         onClick={() => setStep(2)}
                                     >
                                         NEXT STEP
@@ -219,7 +249,12 @@ export default function CreateBookingModal({ isOpen, onClose, clientId }: Create
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-black text-white">K {Math.round((35 + (pickup.length + dropoff.length) * 0.4) * v.multiplier)}</p>
+                                                    <p className="font-black text-white">K {calculatePrice({
+                                                        baseFee: settings.baseFee,
+                                                        perKmRate: settings.kmRate,
+                                                        vehicleMultiplier: VEHICLE_MULTIPLIERS[v.id] || 1,
+                                                        distanceKm: Math.max(2, (pickup.address.length + dropoff.address.length) / 10)
+                                                    })}</p>
                                                     <p className="text-[9px] text-muted-foreground font-bold uppercase">Estimated</p>
                                                 </div>
                                             </button>

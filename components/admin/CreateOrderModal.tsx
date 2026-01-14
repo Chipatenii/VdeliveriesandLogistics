@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MapPin, User, Loader2, Coins, Navigation, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { calculatePrice, VEHICLE_MULTIPLIERS, getDistanceProxy } from '@/lib/pricing';
 import AddressSearch from '../shared/AddressSearch';
 import { useToast } from '@/components/ui/toaster';
 
@@ -30,14 +31,37 @@ export default function CreateOrderModal({
     const [pickup, setPickup] = useState({ address: '', coords: [28.3228, -15.3875] });
     const [dropoff, setDropoff] = useState({ address: '', coords: [28.3228, -15.3875] });
     const [price, setPrice] = useState('');
+    const [vehicleType, setVehicleType] = useState('bike');
     const [assignedDriverId, setAssignedDriverId] = useState<string>('');
+    const [settings, setSettings] = useState({ baseFee: 20, kmRate: 5 });
     const { toast } = useToast();
 
-    // Sync with external updates from map pick
+    // Fetch pricing settings
     React.useEffect(() => {
-        if (externalPickup) setPickup(externalPickup);
-        if (externalDropoff) setDropoff(externalDropoff);
-    }, [externalPickup, externalDropoff]);
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('*');
+            if (data) {
+                const base = data.find(s => s.key === 'base_delivery_fee')?.value || 20;
+                const km = data.find(s => s.key === 'km_rate')?.value || 5;
+                setSettings({ baseFee: Number(base), kmRate: Number(km) });
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    // Auto-calculate price when route or vehicle changes
+    React.useEffect(() => {
+        if (pickup.address && dropoff.address) {
+            const distance = getDistanceProxy(pickup.address, dropoff.address);
+            const calculated = calculatePrice({
+                baseFee: settings.baseFee,
+                perKmRate: settings.kmRate,
+                vehicleMultiplier: VEHICLE_MULTIPLIERS[vehicleType] || 1,
+                distanceKm: distance
+            });
+            setPrice(calculated.toString());
+        }
+    }, [pickup.address, dropoff.address, vehicleType, settings]);
 
     const handleCreateOrder = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -55,6 +79,7 @@ export default function CreateOrderModal({
                 dropoff_address: dropoff.address,
                 pickup_coords: `POINT(${pickup.coords[0]} ${pickup.coords[1]})`,
                 dropoff_coords: `POINT(${dropoff.coords[0]} ${dropoff.coords[1]})`,
+                vehicle_type_required: vehicleType,
                 price_zmw: parseFloat(price),
                 status: assignedDriverId && assignedDriverId !== 'none' ? 'assigned' : 'pending',
                 assigned_driver_id: (assignedDriverId && assignedDriverId !== 'none') ? assignedDriverId : null
@@ -155,6 +180,20 @@ export default function CreateOrderModal({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Vehicle Class</label>
+                                <Select value={vehicleType} onValueChange={setVehicleType}>
+                                    <SelectTrigger className="h-14 bg-secondary/30 border-border text-white rounded-2xl">
+                                        <SelectValue placeholder="Select Vehicle" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-card border-border text-white">
+                                        <SelectItem value="bike">Motorcycle (Fast)</SelectItem>
+                                        <SelectItem value="car">Car (Standard)</SelectItem>
+                                        <SelectItem value="van">Van (Bulk)</SelectItem>
+                                        <SelectItem value="truck">Truck (Heavy)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Fee (ZMW)</label>
                                 <div className="relative">
                                     <Coins className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -167,22 +206,23 @@ export default function CreateOrderModal({
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Assign Driver</label>
-                                <Select onValueChange={setAssignedDriverId}>
-                                    <SelectTrigger className="h-14 bg-secondary/30 border-border text-white rounded-2xl">
-                                        <SelectValue placeholder="Broadcast (Auto)" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-card border-border text-white">
-                                        <SelectItem value="none">Broadcast (Auto)</SelectItem>
-                                        {onlineDrivers.filter(d => d.is_online).map(driver => (
-                                            <SelectItem key={driver.id} value={driver.id}>
-                                                {driver.full_name} ({driver.vehicle_type})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Direct Assignment</label>
+                            <Select onValueChange={setAssignedDriverId}>
+                                <SelectTrigger className="h-14 bg-secondary/30 border-border text-white rounded-2xl">
+                                    <SelectValue placeholder="Broadcast to Fleet" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border text-white">
+                                    <SelectItem value="none">Broadcast to Fleet</SelectItem>
+                                    {onlineDrivers.filter(d => d.is_online).map(driver => (
+                                        <SelectItem key={driver.id} value={driver.id}>
+                                            {driver.full_name} ({driver.vehicle_type})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <Button

@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Package, CheckCircle2, Navigation, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
+import { getOrderStatusStyles, formatZMW } from '@/lib/utils';
 
 export default function OrderManagement({ driverId }: { driverId: string }) {
     const [activeOrder, setActiveOrder] = useState<any | null>(null);
@@ -166,10 +168,11 @@ export default function OrderManagement({ driverId }: { driverId: string }) {
                             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em] mb-1">In-Progress Task</p>
                             <p className="text-xl font-black text-white tracking-tight leading-none">{activeOrder.customer_name.toUpperCase()}</p>
                         </div>
-                        <div className="bg-accent/10 border border-accent/20 px-4 py-1.5 rounded-full">
-                            <span className="text-[10px] text-accent font-black uppercase tracking-widest">
-                                {activeOrder.status.replace('_', ' ')}
-                            </span>
+                        <div className={cn(
+                            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em]",
+                            getOrderStatusStyles(activeOrder.status)
+                        )}>
+                            {activeOrder.status.replace('_', ' ')}
                         </div>
                     </div>
 

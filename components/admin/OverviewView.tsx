@@ -12,7 +12,7 @@ import {
     Activity,
     Clock
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatZMW } from '@/lib/utils';
 
 interface DashboardStats {
     totalRevenue: number;
@@ -81,7 +81,7 @@ export default function OverviewView() {
     const kpis = [
         {
             label: 'Total Revenue',
-            value: `ZMW ${stats.totalRevenue.toLocaleString()}`,
+            value: formatZMW(stats.totalRevenue),
             sub: '+8% from last month',
             icon: TrendingUp,
             color: 'text-green-500',

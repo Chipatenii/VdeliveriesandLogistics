@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { formatZMW, getOrderStatusStyles } from '@/lib/utils';
 
 
 interface PayrollStat {
@@ -227,7 +228,7 @@ export default function PayrollView() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
-                                        <span className="font-black text-white tracking-widest text-sm">ZMW {driver.total_earned}</span>
+                                        <span className="font-black text-white tracking-widest text-sm">{formatZMW(driver.total_earned)}</span>
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="px-3 py-1 bg-secondary/50 rounded-lg inline-flex font-mono text-xs font-bold text-accent">
@@ -235,7 +236,7 @@ export default function PayrollView() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-5 font-black text-accent tracking-widest text-sm">
-                                        ZMW {driver.pending_payout}
+                                        {formatZMW(driver.pending_payout)}
                                     </td>
                                     <td className="px-6 py-5">
                                         <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-yellow-500/20">

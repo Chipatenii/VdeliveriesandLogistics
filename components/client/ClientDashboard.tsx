@@ -16,21 +16,31 @@ import {
     ShieldCheck,
     Star,
     Clock,
-    Users
+    Users,
+    Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import CreateBookingModal from './CreateBookingModal';
+import ProfileModal from '@/components/shared/ProfileModal';
+import { useOrders } from '@/hooks/useOrders';
+import { getOrderStatusStyles, formatZMW, formatDateTime } from '@/lib/utils';
 
 export default function ClientDashboard() {
     const { user, profile, signOut } = useAuth();
-    const [bookings, setBookings] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { orders: bookings, loading, refresh } = useOrders({ clientId: user?.id });
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        await signOut();
+    };
 
     useEffect(() => {
         if (!user) return;
-        fetchBookings();
+        refresh();
 
         const channel = supabase
             .channel('client-updates')
@@ -40,28 +50,14 @@ export default function ClientDashboard() {
                 table: 'orders',
                 filter: `client_id=eq.${user.id}`
             }, () => {
-                fetchBookings();
+                refresh();
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]);
-
-    const fetchBookings = async () => {
-        const { data, error } = await supabase
-            .from('orders')
-            .select(`
-                *,
-                driver:profiles!assigned_driver_id(full_name, vehicle_type, phone)
-            `)
-            .eq('client_id', user?.id)
-            .order('created_at', { ascending: false });
-
-        if (!error && data) setBookings(data);
-        setLoading(false);
-    };
+    }, [user, refresh]);
 
     return (
         <div className="min-h-screen bg-[#050505] text-foreground p-4 md:p-10 pb-20 custom-scrollbar">
@@ -81,14 +77,20 @@ export default function ClientDashboard() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={signOut}
+                        onClick={handleLogout}
+                        disabled={loggingOut}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-2xl h-12 w-12 border border-border/50"
                     >
-                        <LogOut className="h-5 w-5" />
+                        {loggingOut ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
                     </Button>
-                    <div className="bg-secondary/30 p-3 rounded-2xl border border-border/50 backdrop-blur-md">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsProfileOpen(true)}
+                        className="bg-secondary/30 p-3 rounded-2xl border border-border/50 backdrop-blur-md hover:bg-secondary/50 transition-all h-12 w-12 flex items-center justify-center"
+                    >
                         <Users className="h-6 w-6 text-accent" />
-                    </div>
+                    </Button>
                 </div>
             </div>
 
@@ -170,33 +172,39 @@ export default function ClientDashboard() {
                                                     </div>
                                                     <div>
                                                         <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
-                                                            {new Date(order.created_at).toLocaleDateString()} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            {formatDateTime(order.created_at).relative} • {formatDateTime(order.created_at).time}
                                                         </p>
-                                                        <p className="text-lg font-black text-white uppercase tracking-tight">K {order.price_zmw}</p>
+                                                        <p className="text-lg font-black text-white uppercase tracking-tight">{formatZMW(order.price_zmw)}</p>
                                                     </div>
                                                 </div>
                                                 <div className={cn(
-                                                    "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest",
-                                                    order.status === 'delivered' ? "bg-green-500/10 text-green-500 border border-green-500/20" :
-                                                        order.status === 'pending' || order.status === 'requested' ? "bg-accent/10 text-accent border border-accent/20" :
-                                                            "bg-secondary/50 text-muted-foreground border border-border"
+                                                    "inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em]",
+                                                    getOrderStatusStyles(order.status)
                                                 )}>
                                                     {order.status.replace('_', ' ')}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col gap-3">
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin className="h-3.5 w-3.5 text-accent" />
-                                                    <p className="text-xs text-muted-foreground font-medium truncate italic">{order.dropoff_address}</p>
-                                                </div>
-                                                {order.driver && (
-                                                    <div className="flex items-center gap-2 mt-2 bg-secondary/20 p-3 rounded-xl border border-border/50">
-                                                        <ShieldCheck className="h-4 w-4 text-green-500" />
-                                                        <p className="text-[10px] font-black text-white uppercase tracking-widest">
-                                                            Assigned: {order.driver.full_name} • {order.driver.vehicle_type}
-                                                        </p>
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
+                                                <p className="text-[11px] text-muted-foreground font-medium truncate italic">{order.dropoff_address}</p>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-secondary/20 p-3 rounded-xl border border-border/10">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <div className="w-6 h-6 bg-secondary/50 rounded flex items-center justify-center border border-border/50">
+                                                        <Navigation className="h-3 w-3 text-muted-foreground" />
                                                     </div>
-                                                )}
+                                                    <div className="truncate">
+                                                        <p className="text-[10px] font-black text-white tracking-tight truncate">
+                                                            {order.driver?.full_name?.toUpperCase() || "SEARCHING..."}
+                                                        </p>
+                                                        {order.driver && (
+                                                            <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest truncate">
+                                                                {order.driver.vehicle_type || 'Vehicle'} • 4.8★
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm font-black text-accent tracking-tighter whitespace-nowrap">{formatZMW(order.price_zmw)}</p>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -211,6 +219,11 @@ export default function ClientDashboard() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 clientId={user?.id || ''}
+            />
+
+            <ProfileModal
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
             />
         </div>
     );

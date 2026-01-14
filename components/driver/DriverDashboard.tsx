@@ -11,7 +11,9 @@ import { useDriverStats } from '@/hooks/useDriverStats';
 import { LogOut } from 'lucide-react';
 import OrderManagement from './OrderManagement';
 import OrderHistory from './OrderHistory';
-import { cn } from '@/lib/utils';
+import { cn, formatZMW } from '@/lib/utils';
+import ProfileModal from '@/components/shared/ProfileModal';
+import { Loader2 } from 'lucide-react';
 
 // Dynamically import map to avoid SSR issues with Leaflet
 const DriverMap = dynamic(() => import('./DriverMap'), { ssr: false });
@@ -20,6 +22,13 @@ export default function DriverDashboard() {
     const { coords, isTracking, startTracking, stopTracking, error: locationError } = useLocation();
     const { user, signOut } = useAuth();
     const { totalEarnings, deliveriesCount, loading: statsLoading } = useDriverStats(user?.id);
+    const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+    const [loggingOut, setLoggingOut] = React.useState(false);
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        await signOut();
+    };
 
     return (
         <div className="flex flex-col h-screen bg-[#050505] text-foreground p-4 md:p-10">
@@ -43,14 +52,20 @@ export default function DriverDashboard() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={signOut}
+                        onClick={handleLogout}
+                        disabled={loggingOut}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-2xl h-12 w-12 border border-border/50"
                     >
-                        <LogOut className="h-5 w-5" />
+                        {loggingOut ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
                     </Button>
-                    <div className="bg-secondary/30 p-3 rounded-2xl border border-border/50 backdrop-blur-md">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsProfileOpen(true)}
+                        className="bg-secondary/30 p-3 rounded-2xl border border-border/50 backdrop-blur-md hover:bg-secondary/50 transition-all h-12 w-12 flex items-center justify-center"
+                    >
                         <LayoutDashboard className="h-6 w-6 text-accent" />
-                    </div>
+                    </Button>
                 </div>
             </div>
 
@@ -66,7 +81,7 @@ export default function DriverDashboard() {
                     </CardHeader>
                     <CardContent className="p-5 md:p-8 pt-0">
                         <div className="text-2xl font-black text-white tracking-tighter">
-                            {statsLoading ? "..." : `K ${totalEarnings.toLocaleString()}`}
+                            {statsLoading ? "..." : formatZMW(totalEarnings)}
                         </div>
                         <div className="mt-3 h-1 w-full bg-secondary/50 rounded-full overflow-hidden">
                             <div
@@ -144,6 +159,11 @@ export default function DriverDashboard() {
                     <OrderHistory driverId={user.id} />
                 </div>
             )}
+
+            <ProfileModal
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+            />
         </div>
     );
 }

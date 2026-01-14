@@ -8,6 +8,7 @@ interface LocationContextType {
   isTracking: boolean;
   startTracking: () => void;
   stopTracking: () => void;
+  getCurrentPosition: () => Promise<GeolocationCoordinates | null>;
   error: string | null;
 }
 
@@ -16,7 +17,7 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [error, setError] = useState<string|null>(null);
+  const [error, setError] = useState<string | null>(null);
   const watchId = useRef<number | null>(null);
   const wakeLock = useRef<any>(null);
 
@@ -73,7 +74,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     setIsTracking(false);
     await releaseWakeLock();
-    
+
     // Set driver offline in DB
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -84,13 +85,38 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const getCurrentPosition = (): Promise<GeolocationCoordinates | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        setError("Geolocation is not supported");
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(pos.coords),
+        (err) => {
+          setError(err.message);
+          resolve(null);
+        }
+      );
+    });
+  };
+
   const updateLocationInDB = async (coords: GeolocationCoordinates) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    // Fetch profile to check role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profile?.role !== 'driver') return;
 
     // Use the RPC call from the SQL script
     await supabase.rpc('update_driver_location', {
-      driver_id: user.id,
       lat: coords.latitude,
       lng: coords.longitude
     });
@@ -99,7 +125,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await supabase
       .from('profiles')
       .update({ is_online: true })
-      .eq('id', user.id);
+      .eq('id', session.user.id);
   };
 
   // Re-acquire wake lock if tab becomes visible again
@@ -115,7 +141,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   return (
-    <LocationContext.Provider value={{ coords, isTracking, startTracking, stopTracking, error }}>
+    <LocationContext.Provider value={{ coords, isTracking, startTracking, stopTracking, getCurrentPosition, error }}>
       {children}
     </LocationContext.Provider>
   );
