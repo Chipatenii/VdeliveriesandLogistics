@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { calculatePrice, VEHICLE_MULTIPLIERS, getDistanceProxy } from '@/lib/pricing';
 import AddressSearch from '../shared/AddressSearch';
 import { useToast } from '@/components/ui/toaster';
+import { useAuth } from '@/context/AuthContext';
 
 export default function CreateOrderModal({
     isOpen,
@@ -35,6 +36,7 @@ export default function CreateOrderModal({
     const [assignedDriverId, setAssignedDriverId] = useState<string>('');
     const [settings, setSettings] = useState({ baseFee: 20, kmRate: 5 });
     const { toast } = useToast();
+    const { user } = useAuth();
 
     // Fetch pricing settings
     React.useEffect(() => {
@@ -72,8 +74,11 @@ export default function CreateOrderModal({
 
         setLoading(true);
 
+
+
         const { error } = await supabase.from('orders').insert([
             {
+                client_id: user?.id,
                 customer_name: customerName,
                 pickup_address: pickup.address,
                 dropoff_address: dropoff.address,

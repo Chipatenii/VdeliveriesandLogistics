@@ -103,14 +103,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const updateLocationInDB = async (coords: GeolocationCoordinates) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
     // Fetch profile to check role
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     if (profile?.role !== 'driver') return;
@@ -125,7 +125,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await supabase
       .from('profiles')
       .update({ is_online: true })
-      .eq('id', session.user.id);
+      .eq('id', user.id);
   };
 
   // Re-acquire wake lock if tab becomes visible again

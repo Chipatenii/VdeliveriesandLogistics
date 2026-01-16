@@ -5,15 +5,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-    Plus,
-    History,
-    MapPin,
     Truck,
     Navigation,
     LogOut,
-    Coins,
     Package,
-    ShieldCheck,
     Star,
     Clock,
     Users,
@@ -124,14 +119,14 @@ export default function ClientDashboard() {
                                     <Clock className="h-4 w-4 text-accent" />
                                     <span className="text-[10px] font-black text-muted-foreground uppercase">Avg. Pickup</span>
                                 </div>
-                                <span className="text-xs font-black text-white">12 Mins</span>
+                                <span className="text-xs font-black text-white">12 Mins {/* TODO: Make Dynamic based on historical data */}</span>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl border border-white/5">
                                 <div className="flex items-center gap-3">
                                     <Star className="h-4 w-4 text-yellow-500" />
                                     <span className="text-[10px] font-black text-muted-foreground uppercase">Account Level</span>
                                 </div>
-                                <span className="text-xs font-black text-white">PREMIUM</span>
+                                <span className="text-xs font-black text-white">PREMIUM {/* TODO: Fetch from profile tier */}</span>
                             </div>
                         </div>
                     </Card>

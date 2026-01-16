@@ -36,26 +36,26 @@ export async function middleware(req: NextRequest) {
     );
 
     const {
-        data: { session },
-    } = await supabase.auth.getSession();
+        data: { user },
+    } = await supabase.auth.getUser();
 
     const url = req.nextUrl.clone();
     const isAuthPage = url.pathname === '/login' || url.pathname === '/signup';
     const isDashboardPage = url.pathname.startsWith('/dashboard');
 
     // 1. Redirect unauthenticated users away from protected routes
-    if (!session && isDashboardPage) {
+    if (!user && isDashboardPage) {
         url.pathname = '/login';
         return NextResponse.redirect(url);
     }
 
     // 2. Handle authenticated users
-    if (session) {
+    if (user) {
         // Fetch profile once
         const { data: profile } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single();
 
         // If no profile exists, they might be in the middle of signup or something is wrong
